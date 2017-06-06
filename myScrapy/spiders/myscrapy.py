@@ -32,6 +32,38 @@ class Myspider(scrapy.Spider):
 		for td in tds:
 			novelname = td.find('a')['title']
 			novelurl = td.find('a')['href']
-			print('😁', novelname, novelurl)
+			yield Request(novelurl, callback = self.get_chapterurl, meta = {'name':novelname, 'url':novelurl})
+
+
+
+	def get_chapterurl(self, response):
+		item = MyscrapyItem()
+		item['name'] = str(response.meta['name'])[0:-2]
+		item['novelurl'] = response.meta['url']
+		item['name_id'] = str(response.meta['url']).split('/')[-1]
+		trs = BeautifulSoup(response.text, 'lxml').find('table', id = 'at', bgcolor = '#E4E4E4').find_all('tr')
+		tr = trs[0]
+		category = tr.find('a').get_text()
+		author = tr.find_all('td')[1].get_text()
+		item['category'] = category.strip()
+		item['author'] = author.strip()
+		print(item)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Myspider().start_requests()
