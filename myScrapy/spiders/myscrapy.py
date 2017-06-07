@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 import re
 import scrapy #导入scrapy包
+import random
 from bs4 import BeautifulSoup
 from scrapy.http import Request ##一个单独的request的模块，需要跟进URL的时候，需要用它
 from myScrapy.items import MyscrapyItem
+from myScrapy.spiders.proxy import Download
+from myScrapy.spiders.mongodb import MongoQueue
+
 
 class Myspider(scrapy.Spider):
 	"""docstring for Myspider"""
@@ -12,6 +16,8 @@ class Myspider(scrapy.Spider):
 	allowed_domains = ['23us.com']
 	bash_url = 'http://www.23us.com/class/'
 	bashurl = '.html'
+	proxy = Download()
+	mongo_queue = MongoQueue('xiaoshuo', 'novel')
 
 	def start_requests(self):
 		for i in range(1,11):
@@ -24,7 +30,12 @@ class Myspider(scrapy.Spider):
 		bashurl = str(response.url)[:-7]
 		for num in range(1, int(max_num) + 1):
 			url = bashurl + '_' + str(num) + self.bashurl
-			yield Request(url, callback = self.get_name)
+			ipdic = random.choice(self.proxy.iplist)
+			IP = ''.join(str(ipdic['ip']).strip())
+			PORT = ''.join(str(ipdic['port']).strip())
+			IPPORT = 'http://%s:%s' %(IP,PORT)
+			Agent = random.choice(self.proxy.user_agent_list)
+			yield Request(url, callback = self.get_name, meta = {'proxy':IPPORT, 'User-Agent':Agent})#meta 加代理即可防止ban
 		# print(response.text)
 
 	def get_name(self, response):
@@ -47,7 +58,7 @@ class Myspider(scrapy.Spider):
 		author = tr.find_all('td')[1].get_text()
 		item['category'] = category.strip()
 		item['author'] = author.strip()
-		print(item)
+		self.mongo_queue.insert(item)
 
 
 
