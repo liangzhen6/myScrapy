@@ -18,6 +18,26 @@ class Myspider(scrapy.Spider):
 	bashurl = '.html'
 	proxy = Download()
 	mongo_queue = MongoQueue('xiaoshuo', 'novel')
+	mongo_ips = MongoQueue('xiaoshuo', 'ips')
+	user_agent_list = [
+			"Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+        	"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+ 			"Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+ 			"Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+ 			"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.9 Safari/536.5",
+ 			"Mozilla/5.0 (Windows NT 6.0) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.36 Safari/536.5",
+ 			"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+ 			"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+ 			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1063.0 Safari/536.3",
+ 			"Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+			"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1062.0 Safari/536.3",
+ 			"Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+ 			"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+ 			"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.1 Safari/536.3",
+ 			"Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.3 (KHTML, like Gecko) Chrome/19.0.1061.0 Safari/536.3",
+ 			"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+ 			"Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
+		]
 
 	def start_requests(self):
 		for i in range(1,11):
@@ -30,12 +50,15 @@ class Myspider(scrapy.Spider):
 		bashurl = str(response.url)[:-7]
 		for num in range(1, int(max_num) + 1):
 			url = bashurl + '_' + str(num) + self.bashurl
-			ipdic = random.choice(self.proxy.iplist)
-			IP = ''.join(str(ipdic['ip']).strip())
-			PORT = ''.join(str(ipdic['port']).strip())
-			IPPORT = 'http://%s:%s' %(IP,PORT)
-			Agent = random.choice(self.proxy.user_agent_list)
-			yield Request(url, callback = self.get_name, meta = {'proxy':IPPORT, 'User-Agent':Agent})#meta 加代理即可防止ban
+			ipdic = self.mongo_ips.find_ip()
+			if ipdic:
+				IP = ''.join(str(ipdic['ip']).strip())
+				PORT = ''.join(str(ipdic['port']).strip())
+				IPPORT = 'http://%s:%s' %(IP,PORT)
+				Agent = random.choice(self.user_agent_list)
+				yield Request(url, callback = self.get_name, meta = {'proxy':IPPORT, 'User-Agent':Agent})#meta 加代理即可防止ban
+			else:
+				print('放水了，哈哈哈')
 		# print(response.text)
 
 	def get_name(self, response):
@@ -58,7 +81,7 @@ class Myspider(scrapy.Spider):
 		author = tr.find_all('td')[1].get_text()
 		item['category'] = category.strip()
 		item['author'] = author.strip()
-		self.mongo_queue.insert(item)
+		self.mongo_queue.insert_itmes(item)
 
 
 

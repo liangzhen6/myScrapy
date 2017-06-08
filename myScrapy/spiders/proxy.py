@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-## -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 import requests
 import re
 import random
 import time
 from bs4 import BeautifulSoup
+from myScrapy.spiders.mongodb import MongoQueue
 
 class Download(object):
 	"""docstring for Download"""
@@ -29,20 +30,25 @@ class Download(object):
  			"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
  			"Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
 		]
-		self.iplist = []
-		headers = {'User-Agent':random.choice(self.user_agent_list)}
+		self.mongo_ipdb = MongoQueue('xiaoshuo', 'ips')
+		# self.iplist = []
+		index = ['index', '2', '3', '4', '5', '6', '7', '8', '9', '10']
 		try:
-			html = requests.get('http://www.66ip.cn/areaindex_19/index.html',headers = headers)
+			for x in range(10):
+				time.sleep(3)
+				headers = {'User-Agent':random.choice(self.user_agent_list)}
+				html = requests.get('http://www.66ip.cn/areaindex_19/%s.html' %(str(index[x])),headers = headers)
 			# iplistn = re.findall(r'r/>(.*?)<b',html.text,re.S)  ##表示从html.text中获取所有r/><b中的内容，re.S的意思是包括匹配包括换行符，findall返回的是个list哦！				
-			html_soup = BeautifulSoup(html.text, 'lxml')
-			div = html_soup.find('div',id = 'footer').find('div',align = 'center')
-			table = div.find('table')
-			array = table.find_all('tr')
-			array.pop(0)
-			for tr in array:
-				arr_td = tr.find_all('td')
-				dic = {'ip':arr_td[0].get_text(), 'port':arr_td[1].get_text()}
-				self.iplist.append(dic)
+				html_soup = BeautifulSoup(html.text, 'lxml')
+				div = html_soup.find('div',id = 'footer').find('div',align = 'center')
+				table = div.find('table')
+				array = table.find_all('tr')
+				array.pop(0)
+				for tr in array:
+					arr_td = tr.find_all('td')
+					dic = {'ip':arr_td[0].get_text(), 'port':arr_td[1].get_text()}
+					self.mongo_ipdb.insert_ips(dic)
+				# self.iplist.append(dic)
 			# print(self.iplist)
 			# for ip in iplistn:
 			# 	i = re.sub('\n','',ip)#re.sub 是re模块替换的方法，这儿表示将\n替换为空
@@ -50,7 +56,7 @@ class Download(object):
 			# 	self.iplist.append(i.strip())
 		except :
 			print('error')
-			self.iplist = None
+			# self.iplist = None
 
 # req = Download()
 
